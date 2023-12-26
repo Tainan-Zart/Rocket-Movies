@@ -64,6 +64,17 @@ class NotesController{
         return response.status(500).json({ success: false, error: "Error deleting note." });
     }
 }
+
+  async index(request, response){
+
+  const {user_id} = request.query;
+
+  const notes = await knex("movie_notes")
+  .where({user_id})
+  .orderBy("title");
+
+  return response.json({notes});
+}
 }
 
 
