@@ -65,16 +65,45 @@ class NotesController{
     }
 }
 
-  async index(request, response){
+async index(request, response) {
+  const { user_id, title, tags } = request.query;
+  
+  let notes;
 
-  const {user_id, title} = request.query;
+  if (tags) {
+    const filterTags = tags.split(',').map(tag => tag.trim());
 
-  const notes = await knex("movie_notes")
-  .where({user_id})
-  .whereLike("title", `%${title}%` )
-  .orderBy("title");
+    notes = await knex("movie_tags as tags")
+      .select([
+        "notes.id",
+        "notes.title",
+        "notes.user_id"
+      ])
+      .where("notes.user_id", user_id)
+      .where("notes.title", "like", `%${title}%`)
+      .whereIn("tags.name", filterTags)
+      .innerJoin("movie_notes as notes", "notes.id", "=", "tags.note_id")
+      .orderBy("notes.title");
 
-  return response.json({notes});
+  } else {
+    notes = await knex("movie_notes as notes")
+      .select(["id", "title", "user_id"])
+      .where({ user_id })
+      .where("title", "like", `%${title}%`)
+      .orderBy("title");
+  }
+
+  const userTags = await knex("movie_tags").where({user_id});
+  const notesWithTags = notes.map(note => {
+    const noteTags = userTags.filter(tag => tag.note_id === note.id);
+
+    return{
+      ...note,
+      tags: noteTags
+    }
+  });
+
+  return response.json({ notesWithTags });
 }
 }
 
